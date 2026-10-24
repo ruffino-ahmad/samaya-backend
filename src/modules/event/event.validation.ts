@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { objectIdSchema } from "../../validations/common.validation";
+import { blobNameSchemaFor } from "../upload/upload.validation";
 
 const booleanQuerySchema = z
   .union([z.boolean(), z.enum(["true", "false"])])
@@ -56,10 +57,11 @@ export const eventBaseSchema = z.object({
       example: "Events and live musical performances",
       description: "Detailed description of the Event",
     }),
-  banner: z
-    .string({ message: "Banner must be a valid string" })
-    .url({ message: "Banner must be a valid URL" })
-    .openapi({ example: "https://cdn.example.com/banner.jpg" }),
+  banner: blobNameSchemaFor("banners").openapi({
+    example: "banners/8061d5bc-f373-4e94-8179-6d5ce480874b.jpg",
+    description:
+      "Azure Blob path of the event banner, obtained through POST /uploads/request-url with folder \"banners\"",
+  }),
   category: objectIdSchema.openapi({
     example: "64f1a2b3c4d5e6f7g8h9i0j1",
     description: "MongoDB ObjectId of the referenced Category",

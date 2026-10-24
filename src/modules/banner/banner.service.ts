@@ -1,5 +1,7 @@
 import { Errors } from "ds-express-errors";
 import { escapeRegex } from "../../utils/regex";
+import uploadService from "../upload/upload.service";
+import { getFolderFromBlobName } from "../upload/upload.validation";
 import { BannerModel } from "./banner.model";
 import type {
   BannerQueryInput,
@@ -12,9 +14,36 @@ interface UpdateBannerArgs {
   payload: UpdateBannerInput;
 }
 
+type WithImageUrl<T> = T & { imageUrl: string | null };
+
+interface MaybeHydrated {
+  toObject?: () => unknown;
+}
+
+const toPlainObject = <T>(banner: T): T => {
+  if (typeof (banner as MaybeHydrated).toObject === "function") {
+    return (banner as { toObject: () => T }).toObject();
+  }
+  return banner;
+};
+
+const serialize = <T extends { image: string }>(banner: T): WithImageUrl<T> => {
+  const plain = toPlainObject(banner);
+  const isLegacyUrl = /^https?:\/\//.test(plain.image);
+
+  return {
+    ...plain,
+    imageUrl: isLegacyUrl
+      ? plain.image
+      : getFolderFromBlobName(plain.image)
+        ? uploadService.getPublicUrl(plain.image)
+        : null,
+  };
+};
+
 const create = async (payload: CreateBannerInput) => {
   const banner = await BannerModel.create(payload);
-  return banner;
+  return serialize(banner);
 };
 
 const findAll = async (query: BannerQueryInput) => {
@@ -23,7 +52,7 @@ const findAll = async (query: BannerQueryInput) => {
 
   const filter = {
     ...(search && {
-      name: {
+      title: {
         $regex: escapeRegex(search),
         $options: "i",
       },
@@ -40,10 +69,9 @@ const findAll = async (query: BannerQueryInput) => {
   ]);
 
   const totalPages = Math.ceil(totalItems / limit);
-  console.log("masuk");
 
   return {
-    data: banners,
+    data: banners.map(serialize),
     meta: {
       page,
       limit,
@@ -57,7 +85,12 @@ const findAll = async (query: BannerQueryInput) => {
 
 const findOne = async (id: string) => {
   const banner = await BannerModel.findById(id);
-  return banner;
+
+  if (!banner) {
+    throw Errors.NotFound("Banner not found");
+  }
+
+  return serialize(banner);
 };
 
 const update = async ({ id, payload }: UpdateBannerArgs) => {
@@ -65,8 +98,6 @@ const update = async ({ id, payload }: UpdateBannerArgs) => {
   if (!banner) {
     throw Errors.NotFound("Banner not found");
   }
-
-  console.log(payload);
 
   const updatedBanner = await BannerModel.findByIdAndUpdate(id, payload, {
     returnDocument: "after",
@@ -77,7 +108,7 @@ const update = async ({ id, payload }: UpdateBannerArgs) => {
     throw Errors.NotFound("Banner not found");
   }
 
-  return updatedBanner;
+  return serialize(updatedBanner);
 };
 
 const remove = async (id: string) => {
@@ -89,7 +120,7 @@ const remove = async (id: string) => {
     throw Errors.NotFound("Banner not found");
   }
 
-  return banner;
+  return serialize(banner);
 };
 
 export default {

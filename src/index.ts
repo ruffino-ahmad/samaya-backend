@@ -17,12 +17,17 @@ import {
 import connectToDatabase from "./utils/database";
 import { PORT } from "./utils/env.js";
 import { setupErrorHandling } from "./config/error.config.js";
+import { ensureContainerExists } from "./modules/upload/upload.service.js";
 
 async function startServer() {
   try {
     // SET UP DATABASE
     const result = await connectToDatabase();
     console.log("Database status:", result);
+
+    // SET UP BLOB STORAGE
+    await ensureContainerExists();
+    console.log("Blob container status: ready");
 
     // SET UP ERROR HANDLING
     setupErrorHandling();

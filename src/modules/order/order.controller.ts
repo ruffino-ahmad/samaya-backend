@@ -1,4 +1,5 @@
 import { type Response } from "express";
+import { Errors } from "ds-express-errors";
 import { type IReqUser } from "../../middlewares/auth.middleware";
 import orderService from "./order.service";
 import sendResponse, { HTTPStatusCode } from "../../utils/response";
@@ -12,11 +13,7 @@ const create = async (req: IReqUser, res: Response) => {
   const userId = req.user?.id as unknown as string;
 
   if (!userId) {
-    return sendResponse(res, {
-      statusCode: 401,
-      message: "Unauthorized",
-      data: null,
-    });
+    throw Errors.Unauthorized("Unauthorized access");
   }
 
   const payload = req.body as CreateOrderInput;

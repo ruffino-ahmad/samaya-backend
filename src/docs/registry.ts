@@ -13,6 +13,7 @@ import {
 } from "../modules/authentication/auth.validation";
 import {
   confirmUploadSchema,
+  deleteBlobParamsSchema,
   requestUploadUrlSchema,
 } from "../modules/upload/upload.validation";
 import {
@@ -87,6 +88,7 @@ const userSchema = z
 
 const registerResponseSchema = z
   .object({
+    success: z.literal(true).openapi({ example: true }),
     message: z.string().openapi({ example: "Register validation successful" }),
     data: userSchema,
   })
@@ -94,6 +96,7 @@ const registerResponseSchema = z
 
 const loginResponseSchema = z
   .object({
+    success: z.literal(true).openapi({ example: true }),
     message: z.string().openapi({ example: "Login validation successful" }),
     data: z
       .string()
@@ -103,6 +106,7 @@ const loginResponseSchema = z
 
 const profileResponseSchema = z
   .object({
+    success: z.literal(true).openapi({ example: true }),
     message: z.string().openapi({ example: "Get User Profile successful" }),
     data: userSchema,
   })
@@ -110,6 +114,7 @@ const profileResponseSchema = z
 
 const activationResponseSchema = z
   .object({
+    success: z.literal(true).openapi({ example: true }),
     message: z.string().openapi({ example: "Account activation successful" }),
     data: userSchema,
   })
@@ -117,26 +122,47 @@ const activationResponseSchema = z
 
 const requestUploadUrlResponseSchema = z
   .object({
-    uploadUrl: z.string().url().openapi({
-      example: "https://storage.blob.core.windows.net/uploads/file.jpg?sv=...",
-    }),
-    blobName: z.string().openapi({
-      example: "b3f1d2a4-1234-4567-8901-profile-photo.jpg",
-    }),
-    expiresAt: z.string().datetime().openapi({
-      example: "2026-08-24T10:00:00.000Z",
+    success: z.literal(true).openapi({ example: true }),
+    message: z
+      .string()
+      .openapi({ example: "Upload URL generated successfully" }),
+    data: z.object({
+      uploadUrl: z.string().url().openapi({
+        example: "https://storage.blob.core.windows.net/uploads/file.jpg?sv=...",
+      }),
+      blobName: z.string().openapi({
+        example: "b3f1d2a4-1234-4567-8901-profile-photo.jpg",
+      }),
+      expiresAt: z.string().datetime().openapi({
+        example: "2026-08-24T10:00:00.000Z",
+      }),
     }),
   })
   .openapi("RequestUploadUrlResponse");
 
 const confirmUploadResponseSchema = z
   .object({
-    message: z.string().openapi({ example: "Upload confirmed" }),
-    blobName: z.string().openapi({
-      example: "b3f1d2a4-1234-4567-8901-profile-photo.jpg",
+    success: z.literal(true).openapi({ example: true }),
+    message: z.string().openapi({ example: "Upload confirmed successfully" }),
+    data: z.object({
+      blobName: z.string().openapi({
+        example: "b3f1d2a4-1234-4567-8901-profile-photo.jpg",
+      }),
     }),
   })
   .openapi("ConfirmUploadResponse");
+
+const deleteBlobResponseSchema = z
+  .object({
+    success: z.literal(true).openapi({ example: true }),
+    message: z.string().openapi({ example: "File deleted successfully" }),
+    data: z.object({
+      blobName: z.string().openapi({
+        example: "categories/b3f1d2a4-1234-4567-8901-file.jpg",
+      }),
+    }),
+  })
+  .openapi("DeleteBlobResponse");
 
 const paginationMetaSchema = z
   .object({
@@ -156,7 +182,21 @@ const categorySchema = z
     description: z
       .string()
       .openapi({ example: "Events and live musical performances" }),
-    icon: z.string().openapi({ example: "music" }),
+    icon: z
+      .string()
+      .openapi({
+        example: "categories/9f1c2e4a-6b3d-4f8a-9c1e-2d3f4a5b6c7d.png",
+        description: "Azure Blob path of the category icon",
+      }),
+    iconUrl: z
+      .string()
+      .nullable()
+      .openapi({
+        example:
+          "https://acarainstorage.blob.core.windows.net/samaya-media-public/categories/9f1c2e4a-6b3d-4f8a-9c1e-2d3f4a5b6c7d.png",
+        description:
+          "Publicly reachable URL derived from `icon`, or `null` when `icon` is not a managed blob path (legacy records predating the upload flow)",
+      }),
     createdAt: z.string().datetime().optional(),
     updatedAt: z.string().datetime().optional(),
   })
@@ -212,8 +252,19 @@ const eventSchema = z
       .openapi({ example: "Events and live musical performances" }),
     banner: z
       .string()
-      .url()
-      .openapi({ example: "https://cdn.example.com/banner.jpg" }),
+      .openapi({
+        example: "banners/8061d5bc-f373-4e94-8179-6d5ce480874b.jpg",
+        description: "Azure Blob path of the event banner",
+      }),
+    bannerUrl: z
+      .string()
+      .nullable()
+      .openapi({
+        example:
+          "https://acarainstorage.blob.core.windows.net/samaya-media-public/banners/8061d5bc-f373-4e94-8179-6d5ce480874b.jpg",
+        description:
+          "Publicly reachable URL derived from `banner`. Legacy records that store an absolute URL are passed through unchanged; `null` when `banner` is not a managed blob path.",
+      }),
     category: z
       .union([z.string(), categorySchema])
       .openapi({ example: "64f1a2b3c4d5e6f7g8h9i0j1" }),
@@ -258,10 +309,8 @@ const ticketListResponseSchema = z
   .object({
     success: z.literal(true).openapi({ example: true }),
     message: z.string().openapi({ example: "Ticket find all successfully" }),
-    data: z.object({
-      data: z.array(ticketSchema),
-      meta: paginationMetaSchema,
-    }),
+    data: z.array(ticketSchema),
+    meta: paginationMetaSchema,
   })
   .openapi("TicketListResponse");
 
@@ -272,6 +321,15 @@ const bannerSchema = z
     image: z.string().openapi({
       example: "banners/38478785-eae1-41ad-a4df-184b1b4554e7.png",
     }),
+    imageUrl: z
+      .string()
+      .nullable()
+      .openapi({
+        example:
+          "https://acarainstorage.blob.core.windows.net/samaya-media-public/banners/38478785-eae1-41ad-a4df-184b1b4554e7.png",
+        description:
+          "Publicly reachable URL derived from `image`. Legacy records that store an absolute URL are passed through unchanged; `null` when `image` is not a managed blob path.",
+      }),
     isShow: z.boolean().openapi({ example: true }),
     createdAt: z.string().datetime().optional(),
     updatedAt: z.string().datetime().optional(),
@@ -421,7 +479,7 @@ registry.registerPath({
   summary: "Register new user",
   request: jsonBody(registerValidateSchema),
   responses: {
-    200: {
+    201: {
       description: "Registration successful",
       content: { "application/json": { schema: registerResponseSchema } },
     },
@@ -594,6 +652,10 @@ registry.registerPath({
   path: "/uploads/confirm",
   tags: ["Upload"],
   summary: "Confirm and validate an uploaded Blob",
+  description:
+    "Validates the blob server-side by size and magic bytes. The `blobName` folder must be " +
+    "one the caller's role is allowed to manage, so a client cannot confirm a blob that " +
+    "belongs to another role's folder.",
   security: bearerSecurity,
   request: jsonBody(confirmUploadSchema),
   responses: {
@@ -609,6 +671,43 @@ registry.registerPath({
       description: "Unauthorized access",
       content: { "application/json": { schema: errorResponseSchema } },
     },
+    403: {
+      description: "Your role is not authorized to manage this blob folder",
+      content: { "application/json": { schema: errorResponseSchema } },
+    },
+    422: {
+      description: "Validation failed",
+      content: { "application/json": { schema: errorResponseSchema } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/uploads/{folder}/{fileName}",
+  tags: ["Upload"],
+  summary: "Delete an uploaded Blob",
+  description:
+    "Deletes a blob so the caller can replace or discard a file it has just uploaded. " +
+    "The operation is idempotent: deleting a blob that no longer exists still succeeds. " +
+    "The caller must be allowed to manage the target folder.",
+  security: bearerSecurity,
+  request: {
+    params: deleteBlobParamsSchema,
+  },
+  responses: {
+    200: {
+      description: "Blob deleted",
+      content: { "application/json": { schema: deleteBlobResponseSchema } },
+    },
+    401: {
+      description: "Unauthorized access",
+      content: { "application/json": { schema: errorResponseSchema } },
+    },
+    403: {
+      description: "Your role is not authorized to manage this blob folder",
+      content: { "application/json": { schema: errorResponseSchema } },
+    },
     422: {
       description: "Validation failed",
       content: { "application/json": { schema: errorResponseSchema } },
@@ -621,6 +720,12 @@ registry.registerPath({
   path: "/categories",
   tags: ["Category"],
   summary: "Create a category",
+  description:
+    "The `icon` field must be a blob path obtained from the two-step upload flow: " +
+    "`POST /uploads/request-url` with `folder: \"categories\"` -> `PUT` the raw file " +
+    "bytes to the returned `uploadUrl` -> `POST /uploads/confirm`. The backend re-validates " +
+    "the blob (existence, size, and magic bytes) before persisting, and deletes the blob if " +
+    "the category cannot be created. The response contains `iconUrl`, a ready-to-render URL.",
   security: bearerSecurity,
   request: jsonBody(createCategorySchema),
   responses: {
@@ -635,6 +740,10 @@ registry.registerPath({
           ),
         },
       },
+    },
+    400: {
+      description: "The icon blob is missing, too large, or not a valid image",
+      content: { "application/json": { schema: errorResponseSchema } },
     },
     401: {
       description: "Unauthorized access",
@@ -728,6 +837,10 @@ registry.registerPath({
       description: "You do not have permission to access this resource",
       content: { "application/json": { schema: errorResponseSchema } },
     },
+    404: {
+      description: "Category not found",
+      content: { "application/json": { schema: errorResponseSchema } },
+    },
     422: {
       description: "Validation failed",
       content: { "application/json": { schema: errorResponseSchema } },
@@ -740,6 +853,9 @@ registry.registerPath({
   path: "/categories/{id}",
   tags: ["Category"],
   summary: "Delete a category",
+  description:
+    "Deletes the category and its icon blob. The category must not still be " +
+    "referenced by any event, otherwise the request is rejected with 409.",
   security: bearerSecurity,
   request: { params: idParamsSchema },
   responses: {
@@ -750,7 +866,7 @@ registry.registerPath({
           schema: categoryResponseSchema(
             "Success remove category",
             "DeleteCategoryResponse",
-            z.null(),
+            categorySchema,
           ),
         },
       },
@@ -761,6 +877,14 @@ registry.registerPath({
     },
     403: {
       description: "You do not have permission to access this resource",
+      content: { "application/json": { schema: errorResponseSchema } },
+    },
+    404: {
+      description: "Category not found",
+      content: { "application/json": { schema: errorResponseSchema } },
+    },
+    409: {
+      description: "Category is still referenced by one or more events",
       content: { "application/json": { schema: errorResponseSchema } },
     },
     422: {
@@ -775,6 +899,11 @@ registry.registerPath({
   path: "/events",
   tags: ["Event"],
   summary: "Create an event",
+  description:
+    "The `banner` field must be a blob path obtained through `POST /uploads/request-url` " +
+    "with `folder: \"banners\"`, followed by a `PUT` of the raw file bytes and " +
+    "`POST /uploads/confirm`. The backend re-validates the blob (existence, size, " +
+    "magic bytes) before persisting, and deletes the blob if the event cannot be created.",
   security: bearerSecurity,
   request: jsonBody(createEventSchema),
   responses: {
@@ -789,6 +918,10 @@ registry.registerPath({
           ),
         },
       },
+    },
+    400: {
+      description: "The banner blob is missing, too large, or not a valid image",
+      content: { "application/json": { schema: errorResponseSchema } },
     },
     401: {
       description: "Unauthorized access",
@@ -915,6 +1048,10 @@ registry.registerPath({
         },
       },
     },
+    400: {
+      description: "The banner blob is missing, too large, or not a valid image",
+      content: { "application/json": { schema: errorResponseSchema } },
+    },
     401: {
       description: "Unauthorized access",
       content: { "application/json": { schema: errorResponseSchema } },
@@ -965,6 +1102,10 @@ registry.registerPath({
     },
     403: {
       description: "You do not have permission to access this resource",
+      content: { "application/json": { schema: errorResponseSchema } },
+    },
+    404: {
+      description: "Event not found",
       content: { "application/json": { schema: errorResponseSchema } },
     },
     422: {
@@ -1299,7 +1440,7 @@ registry.registerPath({
           schema: categoryResponseSchema(
             "Banner deleted successfully",
             "DeleteBannerResponse",
-            z.null(),
+            bannerSchema,
           ),
         },
       },
@@ -1815,7 +1956,7 @@ export function generateOpenApiDocument() {
       description: "API documentation for Samaya",
     },
     servers: [
-      { url: "http://localhost:3000/api", description: "Local server" },
+      { url: "http://localhost:3001/api", description: "Local server" },
       { url: "https://api.samaya.com/api", description: "Production server" },
     ],
     tags: [

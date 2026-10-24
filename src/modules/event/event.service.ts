@@ -1,11 +1,52 @@
 import { Errors } from "ds-express-errors";
 import CategoryModel from "../category/category.model";
+import uploadService from "../upload/upload.service";
+import { getFolderFromBlobName } from "../upload/upload.validation";
 import type { IEvent } from "./event.model";
 import type { EventQueryInput } from "./event.validation";
 import EventModel from "./event.model";
 import { resolvingUniqueSlug } from "../../utils/slug";
 import { escapeRegex } from "../../utils/regex";
 import type { CreateEventArgs, UpdateEventArgs } from "./event.interface.js";
+
+type MaybeHydrated = {
+  toObject?: () => unknown;
+};
+
+const toPlainObject = <T>(category: T): T => {
+  if (typeof (category as MaybeHydrated).toObject === "function") {
+    return (category as { toObject: () => T }).toObject();
+  }
+  return category;
+};
+
+const serialize = <T extends { banner: string }>(
+  event: T,
+): T & { bannerUrl: string | null } => {
+  const plain = toPlainObject(event);
+  const isLegacyUrl = /^https?:\/\//.test(plain.banner);
+
+  return {
+    ...plain,
+    bannerUrl: isLegacyUrl
+      ? plain.banner
+      : getFolderFromBlobName(plain.banner)
+        ? uploadService.getPublicUrl(plain.banner)
+        : null,
+  };
+};
+
+const deleteBlobIfUnreferenced = async (banner: string) => {
+  if (!getFolderFromBlobName(banner)) return;
+
+  const stillReferenced = await EventModel.countDocuments({ banner }).catch(
+    () => null,
+  );
+
+  if (stillReferenced === null || stillReferenced > 0) return;
+
+  await uploadService.deleteBlob(banner).catch(() => undefined);
+};
 
 const create = async ({
   payload,
@@ -29,13 +70,25 @@ const create = async ({
 
   const slug = await resolvingUniqueSlug(payload.name);
 
-  const result = await EventModel.create({
-    ...payload,
-    slug,
-    createdBy: userId,
-  });
+  const validation = await uploadService.validateUploadedBlob(payload.banner);
+  if (!validation.isValid) {
+    throw Errors.BadRequest(
+      `Invalid banner file: ${validation.reason ?? "unknown reason"}`,
+    );
+  }
 
-  return result;
+  try {
+    const result = await EventModel.create({
+      ...payload,
+      slug,
+      createdBy: userId,
+    });
+
+    return serialize(result);
+  } catch (error) {
+    await uploadService.deleteBlob(payload.banner).catch(() => undefined);
+    throw error;
+  }
 };
 
 const findAll = async (query: EventQueryInput) => {
@@ -82,7 +135,7 @@ const findAll = async (query: EventQueryInput) => {
   const totalPages = Math.ceil(totalItems / limit);
 
   return {
-    data: events,
+    data: events.map(serialize),
     meta: {
       page,
       limit,
@@ -96,7 +149,12 @@ const findAll = async (query: EventQueryInput) => {
 
 const findOne = async (id: string) => {
   const event = await EventModel.findById(id);
-  return event;
+
+  if (!event) {
+    throw Errors.NotFound("Event not found");
+  }
+
+  return serialize(event);
 };
 
 const update = async ({ id, payload }: UpdateEventArgs) => {
@@ -138,6 +196,15 @@ const update = async ({ id, payload }: UpdateEventArgs) => {
     slug = await resolvingUniqueSlug(payload.name, id);
   }
 
+  if (payload.banner) {
+    const validation = await uploadService.validateUploadedBlob(payload.banner);
+    if (!validation.isValid) {
+      throw Errors.BadRequest(
+        `Invalid banner file: ${validation.reason ?? "unknown reason"}`,
+      );
+    }
+  }
+
   const updatedEvent = await EventModel.findByIdAndUpdate(
     id,
     {
@@ -156,7 +223,11 @@ const update = async ({ id, payload }: UpdateEventArgs) => {
     throw Errors.NotFound("Event not found");
   }
 
-  return updatedEvent;
+  if (payload.banner && event.banner !== payload.banner) {
+    await deleteBlobIfUnreferenced(event.banner);
+  }
+
+  return serialize(updatedEvent);
 };
 
 const remove = async (id: string) => {
@@ -164,7 +235,13 @@ const remove = async (id: string) => {
     returnDocument: "after",
   });
 
-  return event;
+  if (!event) {
+    throw Errors.NotFound("Event not found");
+  }
+
+  await deleteBlobIfUnreferenced(event.banner);
+
+  return serialize(event);
 };
 
 const findOneBySlug = async (slug: string) => {
@@ -176,7 +253,7 @@ const findOneBySlug = async (slug: string) => {
     throw Errors.NotFound("Event not found");
   }
 
-  return event;
+  return serialize(event);
 };
 
 export default {
@@ -186,4 +263,5 @@ export default {
   update,
   remove,
   findOneBySlug,
+  deleteBlobIfUnreferenced,
 };

@@ -1,10 +1,19 @@
 import type { Response } from "express";
 
+export interface ResponseMeta {
+  page: number;
+  limit: number;
+  totalItems: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+}
+
 interface ResponseOptions<T> {
   statusCode: number;
   message: string;
   data: T | null;
-  meta?: Record<string, unknown>;
+  meta?: ResponseMeta;
 }
 
 export const HTTPStatusCode = {

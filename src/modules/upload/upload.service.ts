@@ -1,4 +1,3 @@
-import path from "path";
 import { randomUUID } from "crypto";
 
 import {
@@ -12,13 +11,17 @@ import {
   AZURE_STORAGE_ACCOUNT_NAME,
   AZURE_STORAGE_ACCOUNT_KEY,
   AZURE_BLOB_CONTAINER_NAME,
+  AZURE_BLOB_PUBLIC_URL,
 } from "../../utils/env";
 import {
   ALLOWED_MIME_TYPES,
+  EXTENSION_BY_MIME,
   FOLDER_ROLE_PERMISSIONS,
   MAX_FILE_SIZE_BYTES,
+  getFolderFromBlobName,
 } from "./upload.validation";
 import { Errors } from "ds-express-errors";
+import type { Role } from "../../utils/constant";
 import type {
   GenerateUploadUrlParams,
   GenerateUploadUrlResult,
@@ -41,6 +44,31 @@ export async function ensureContainerExists(): Promise<void> {
   await containerClient.createIfNotExists();
 }
 
+const getPublicUrl = (blobName: string): string => {
+  const base = AZURE_BLOB_PUBLIC_URL.replace(/\/+$/, "");
+  const path = blobName.replace(/^\/+/, "");
+  return `${base}/${path}`;
+};
+
+const deleteBlob = async (blobName: string): Promise<void> => {
+  await containerClient.getBlockBlobClient(blobName).deleteIfExists();
+};
+
+const assertBlobFolderAllowed = (blobName: string, userRole: Role): void => {
+  const folder = getFolderFromBlobName(blobName);
+
+  if (!folder) {
+    throw Errors.BadRequest("Invalid blob path");
+  }
+
+  const allowedRoles = FOLDER_ROLE_PERMISSIONS[folder];
+  if (!allowedRoles.includes(userRole)) {
+    throw Errors.Forbidden(
+      `Access denied. Your role '${userRole}' is not authorized to manage assets in the '${folder}' directory`,
+    );
+  }
+};
+
 const generateUploadUrl = async (
   params: GenerateUploadUrlParams,
 ): Promise<GenerateUploadUrlResult> => {
@@ -53,8 +81,14 @@ const generateUploadUrl = async (
     );
   }
 
-  const extention = path.extname(fileName).toLowerCase();
-  const blobName = `${folder}/${randomUUID()}${extention}`;
+  await ensureContainerExists();
+
+  const extension = EXTENSION_BY_MIME[contentType];
+  if (!extension) {
+    throw Errors.BadRequest("Unsupported content type");
+  }
+
+  const blobName = `${folder}/${randomUUID()}${extension}`;
 
   const blockBlobClient = containerClient.getBlockBlobClient(blobName);
   const expiresOn = new Date(Date.now() + 5 * 60 * 1000); // 5 menit
@@ -101,6 +135,7 @@ function detectrealMimeType(buffer: Buffer): string | null {
 interface ValidationResult {
   isValid: boolean;
   reason?: string;
+  mimeType?: string;
 }
 
 const validateUploadedBlob = async (
@@ -138,7 +173,7 @@ const validateUploadedBlob = async (
   const downloadResponse = await blockBlobClient.downloadToBuffer(0, 16);
   const realMimeType = detectrealMimeType(downloadResponse);
 
-  if (!realMimeType || !ALLOWED_MIME_TYPES.includes(realMimeType as any)) {
+  if (!realMimeType || !ALLOWED_MIME_TYPES.includes(realMimeType)) {
     await blockBlobClient.deleteIfExists();
     return {
       isValid: false,
@@ -148,8 +183,15 @@ const validateUploadedBlob = async (
 
   return {
     isValid: true,
+    mimeType: realMimeType,
   };
 };
 
-export default { generateUploadUrl, validateUploadedBlob };
+export default {
+  generateUploadUrl,
+  validateUploadedBlob,
+  assertBlobFolderAllowed,
+  getPublicUrl,
+  deleteBlob,
+};
 export { containerClient };

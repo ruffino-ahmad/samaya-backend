@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { blobNameSchemaFor } from "../upload/upload.validation";
 
 export const createCategorySchema = z
   .object({
@@ -20,7 +21,11 @@ export const createCategorySchema = z
         example: "Events and live musical performances",
         description: "Detailed description of the category",
       }),
-    icon: z.string(),
+    icon: blobNameSchemaFor("categories").openapi({
+      example: "categories/9f1c2e4a-6b3d-4f8a-9c1e-2d3f4a5b6c7d.png",
+      description:
+        "Blob path returned by POST /uploads/request-url after a successful upload to Azure Blob Storage",
+    }),
   })
   .openapi("CreateCategoryRequest");
 

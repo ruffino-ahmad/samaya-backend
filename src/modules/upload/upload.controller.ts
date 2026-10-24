@@ -1,10 +1,11 @@
-import type { Request, Response } from "express";
+import type { Response } from "express";
 
 import uploadService from "./upload.service";
 
 import {
   type RequestUploadUrlInput,
   type ConfirmUploadInput,
+  type DeleteBlobParamsInput,
 } from "./upload.validation";
 import { Errors } from "ds-express-errors";
 import type { IReqUser } from "../../middlewares/auth.middleware";
@@ -29,8 +30,11 @@ const requestUploadUrl = async (req: IReqUser, res: Response) => {
   });
 };
 
-const confirmUpload = async (req: Request, res: Response) => {
+const confirmUpload = async (req: IReqUser, res: Response) => {
   const { blobName } = req.body as ConfirmUploadInput;
+  const userRole = req.user?.role as Role;
+
+  uploadService.assertBlobFolderAllowed(blobName, userRole);
 
   const validation = await uploadService.validateUploadedBlob(blobName);
   if (!validation.isValid) {
@@ -44,7 +48,24 @@ const confirmUpload = async (req: Request, res: Response) => {
   });
 };
 
+const deleteBlob = async (req: IReqUser, res: Response) => {
+  const { folder, fileName } = req.params as DeleteBlobParamsInput;
+  const blobName = `${folder}/${fileName}`;
+  const userRole = req.user?.role as Role;
+
+  uploadService.assertBlobFolderAllowed(blobName, userRole);
+
+  await uploadService.deleteBlob(blobName);
+
+  return sendResponse(res, {
+    statusCode: HTTPStatusCode.OK,
+    message: "File deleted successfully",
+    data: { blobName },
+  });
+};
+
 export default {
   requestUploadUrl,
   confirmUpload,
+  deleteBlob,
 };

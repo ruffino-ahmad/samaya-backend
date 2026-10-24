@@ -25,7 +25,7 @@ const findAll = async (req: IReqUser, res: Response) => {
 
   return sendResponse(res, {
     statusCode: HTTPStatusCode.OK,
-    message: "Success find all category",
+    message: "Success find all categories",
     data: result.data,
     meta: result.meta,
   });
@@ -59,12 +59,12 @@ const update = async (req: IReqUser, res: Response) => {
 const remove = async (req: IReqUser, res: Response) => {
   const { id } = req.params as IdParamInput;
 
-  await categoryService.remove(id);
+  const result = await categoryService.remove(id);
 
   return sendResponse(res, {
     statusCode: HTTPStatusCode.OK,
     message: "Success remove category",
-    data: null,
+    data: result,
   });
 };
 

@@ -6,6 +6,7 @@ import authMiddleware from "../../middlewares/auth.middleware";
 import { validate } from "../../middlewares/validate";
 import {
   confirmUploadSchema,
+  deleteBlobParamsSchema,
   requestUploadUrlSchema,
 } from "./upload.validation";
 
@@ -23,6 +24,13 @@ router.post(
   authMiddleware,
   validate(confirmUploadSchema),
   uploadController.confirmUpload,
+);
+
+router.delete(
+  "/:folder/:fileName",
+  authMiddleware,
+  validate(deleteBlobParamsSchema, "params"),
+  uploadController.deleteBlob,
 );
 
 export default router;

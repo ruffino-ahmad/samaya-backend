@@ -35,7 +35,7 @@ const register = async (payload: CreateUserInput) => {
     activationCodeExpires,
   });
 
-  const activationLink = `${APP_BASE_URL}/auth/activation?code=${activationCode}`;
+  const activationLink = `${APP_BASE_URL}/auth/activation?activationCode=${activationCode}`;
   const payloadEmail = { toEmail: email, activationLink };
   const messageText = Buffer.from(JSON.stringify(payloadEmail)).toString(
     "base64",

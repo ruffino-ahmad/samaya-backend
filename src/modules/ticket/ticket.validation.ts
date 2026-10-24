@@ -6,7 +6,7 @@ export const ticketBaseSchema = z.object({
     .string({ error: "Ticket name must be a valid string" })
     .trim()
     .min(2, { error: "Ticket name must be at least 2 characters long" })
-    .max(10, { error: "Ticket name cannot exceed 100 characters" })
+    .max(100, { error: "Ticket name cannot exceed 100 characters" })
     .openapi({
       example: "Early Bird - VIP Access",
       description: "Name or tier of the ticket",
