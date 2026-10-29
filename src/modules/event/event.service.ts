@@ -3,7 +3,7 @@ import CategoryModel from "../category/category.model";
 import uploadService from "../upload/upload.service";
 import { getFolderFromBlobName } from "../upload/upload.validation";
 import type { IEvent } from "./event.model";
-import type { EventQueryInput } from "./event.validation";
+import type { EventQueryInput, UpdateEventInput } from "./event.validation";
 import EventModel from "./event.model";
 import { resolvingUniqueSlug } from "../../utils/slug";
 import { escapeRegex } from "../../utils/regex";
@@ -205,10 +205,15 @@ const update = async ({ id, payload }: UpdateEventArgs) => {
     }
   }
 
+  // Buang key yang tidak dikirim klien agar tidak menimpa data tersimpan.
+  const definedPayload = Object.fromEntries(
+    Object.entries(payload).filter(([, value]) => value !== undefined),
+  ) as UpdateEventInput;
+
   const updatedEvent = await EventModel.findByIdAndUpdate(
     id,
     {
-      ...payload,
+      ...definedPayload,
       slug,
     },
     {

@@ -66,13 +66,21 @@ export const eventBaseSchema = z.object({
     example: "64f1a2b3c4d5e6f7g8h9i0j1",
     description: "MongoDB ObjectId of the referenced Category",
   }),
-  isFeatured: z.boolean().default(false),
-  isOnline: z.boolean().default(false),
-  isPublish: z.boolean().default(false),
+  // Jangan beri .default() di base schema: `.partial()` pada Zod 4 tetap
+  // mengeksekusi .default() untuk key yang tidak dikirim, sehingga PATCH
+  // yang hanya mengirim satu flag akan menimpa flag lainnya menjadi false.
+  isFeatured: z.boolean(),
+  isOnline: z.boolean(),
+  isPublish: z.boolean(),
   location: eventLocationSchema,
 });
 
 export const createEventSchema = eventBaseSchema
+  .extend({
+    isFeatured: z.boolean().default(false),
+    isOnline: z.boolean().default(false),
+    isPublish: z.boolean().default(false),
+  })
   .refine((data) => data.endDate > data.startDate, {
     message: "endDate must be greater than startDate",
     path: ["endDate"],

@@ -20,21 +20,28 @@ export const bannerBaseSchema = z.object({
       example: "banners/38478785-eae1-41ad-a4df-184b1b4554e7.png",
     }),
 
-  isShow: z
-    .boolean({ error: "isShow must be a boolean value" })
-    .default(true)
-    .openapi({
-      description: "Visibility status of the banner in client applications",
-      example: true,
-    }),
+  // Jangan beri .default() di base schema: `.partial()` pada Zod 4 tetap
+  // mengeksekusi .default() untuk key yang tidak dikirim, sehingga PATCH
+  // yang hanya mengirim satu field akan menimpa isShow menjadi true.
+  isShow: z.boolean({ error: "isShow must be a boolean value" }).openapi({
+    description: "Visibility status of the banner in client applications",
+    example: true,
+  }),
 });
 
-export const createBannerSchema = bannerBaseSchema.openapi(
-  "CreateBannerRequest",
-  {
+export const createBannerSchema = bannerBaseSchema
+  .extend({
+    isShow: z
+      .boolean({ error: "isShow must be a boolean value" })
+      .default(true)
+      .openapi({
+        description: "Visibility status of the banner in client applications",
+        example: true,
+      }),
+  })
+  .openapi("CreateBannerRequest", {
     description: "Request payload for creating a new banner",
-  },
-);
+  });
 
 export const updateBannerSchema = bannerBaseSchema
   .partial()
