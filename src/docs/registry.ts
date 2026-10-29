@@ -272,7 +272,7 @@ const eventSchema = z
     createdBy: z.union([z.string(), userSchema]),
     isFeatured: z.boolean().openapi({ example: false }),
     isOnline: z.boolean().openapi({ example: false }),
-    isPublish: z.boolean().openapi({ example: true }),
+    isPublished: z.boolean().openapi({ example: true }),
     location: eventLocationResponseSchema.optional(),
     createdAt: z.string().datetime().optional(),
     updatedAt: z.string().datetime().optional(),

@@ -71,7 +71,7 @@ export const eventBaseSchema = z.object({
   // yang hanya mengirim satu flag akan menimpa flag lainnya menjadi false.
   isFeatured: z.boolean(),
   isOnline: z.boolean(),
-  isPublish: z.boolean(),
+  isPublished: z.boolean(),
   location: eventLocationSchema,
 });
 
@@ -79,7 +79,7 @@ export const createEventSchema = eventBaseSchema
   .extend({
     isFeatured: z.boolean().default(false),
     isOnline: z.boolean().default(false),
-    isPublish: z.boolean().default(false),
+    isPublished: z.boolean().default(false),
   })
   .refine((data) => data.endDate > data.startDate, {
     message: "endDate must be greater than startDate",
@@ -138,7 +138,7 @@ export const eventQuerySchema = z
       example: true,
       description: "Filter by online/offline event format",
     }),
-    isPublish: booleanQuerySchema.optional().openapi({
+    isPublished: booleanQuerySchema.optional().openapi({
       example: true,
       description: "Filter by publication status",
     }),

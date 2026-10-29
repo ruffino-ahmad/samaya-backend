@@ -92,7 +92,7 @@ const create = async ({
 };
 
 const findAll = async (query: EventQueryInput) => {
-  const { page, limit, search, category, isFeatured, isOnline, isPublish } =
+  const { page, limit, search, category, isFeatured, isOnline, isPublished } =
     query;
   const skip = (page - 1) * limit;
 
@@ -116,8 +116,8 @@ const findAll = async (query: EventQueryInput) => {
       isOnline,
     }),
 
-    ...(typeof isPublish === "boolean" && {
-      isPublish,
+    ...(typeof isPublished === "boolean" && {
+      isPublished,
     }),
   };
 

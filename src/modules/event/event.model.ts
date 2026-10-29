@@ -28,7 +28,7 @@ export interface IEvent extends Document {
   banner: string;
   isFeatured: boolean;
   isOnline: boolean;
-  isPublish: boolean;
+  isPublished: boolean;
   category: Types.ObjectId | string;
   slug: string;
   createdBy: Types.ObjectId | string;
@@ -127,7 +127,7 @@ const EventSchema = new mongoose.Schema<IEvent>(
       type: Boolean,
       default: true,
     },
-    isPublish: {
+    isPublished: {
       type: Boolean,
       default: true,
     },
