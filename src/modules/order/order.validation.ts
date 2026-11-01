@@ -60,6 +60,24 @@ export const orderQuerySchema = z
   })
   .openapi("OrderQueryRequest");
 
+/**
+ * Payload notifikasi (webhook) dari Midtrans.
+ * Catatan: gross_amount dikirim sebagai string, contoh "150000.00".
+ */
+export const orderNotificationSchema = z.object({
+  order_id: z.string().min(1, { message: "order_id is required" }),
+  status_code: z.string().min(1, { message: "status_code is required" }),
+  gross_amount: z.string().min(1, { message: "gross_amount is required" }),
+  signature_key: z.string().min(1, { message: "signature_key is required" }),
+  transaction_status: z
+    .string()
+    .min(1, { message: "transaction_status is required" }),
+  fraud_status: z.string().optional(),
+  payment_type: z.string().optional(),
+  transaction_id: z.string().optional(),
+});
+
 export type CreateOrderInput = z.infer<typeof createOrderSchema>;
 export type OrderQueryInput = z.infer<typeof orderQuerySchema>;
 export type OrderIdParamInput = z.infer<typeof orderIdParamSchema>;
+export type OrderNotificationInput = z.infer<typeof orderNotificationSchema>;

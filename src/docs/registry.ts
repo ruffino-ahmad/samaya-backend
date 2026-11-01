@@ -44,6 +44,7 @@ import {
 import {
   createOrderSchema,
   orderIdParamSchema,
+  orderNotificationSchema,
   orderQuerySchema,
 } from "../modules/order/order.validation";
 import {
@@ -1503,6 +1504,38 @@ registry.registerPath({
     409: {
       description:
         "Ticket sold out, another user purchased last available tickets",
+      content: { "application/json": { schema: errorResponseSchema } },
+    },
+    422: {
+      description: "Validation failed",
+      content: { "application/json": { schema: errorResponseSchema } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/orders/notification",
+  tags: ["Order"],
+  summary: "Midtrans payment notification (webhook)",
+  description:
+    "Public endpoint called by Midtrans server. The request is verified using signature_key = SHA512(order_id + status_code + gross_amount + ServerKey). Only verified notifications can change the order status.",
+  request: jsonBody(orderNotificationSchema),
+  responses: {
+    200: {
+      description: "Notification processed",
+      content: {
+        "application/json": {
+          schema: categoryResponseSchema(
+            "Notification processed successfully",
+            "OrderNotificationResponse",
+            orderSchema.nullable(),
+          ),
+        },
+      },
+    },
+    401: {
+      description: "Invalid signature key",
       content: { "application/json": { schema: errorResponseSchema } },
     },
     422: {

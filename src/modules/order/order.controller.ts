@@ -1,4 +1,4 @@
-import { type Response } from "express";
+import { type Request, type Response } from "express";
 import { Errors } from "ds-express-errors";
 import { type IReqUser } from "../../middlewares/auth.middleware";
 import orderService from "./order.service";
@@ -6,6 +6,7 @@ import sendResponse, { HTTPStatusCode } from "../../utils/response";
 import type {
   CreateOrderInput,
   OrderIdParamInput,
+  OrderNotificationInput,
   OrderQueryInput,
 } from "./order.validation.js";
 
@@ -41,8 +42,10 @@ const findAll = async (req: IReqUser, res: Response) => {
 
 const findOne = async (req: IReqUser, res: Response) => {
   const { orderId } = req.params as OrderIdParamInput;
+  const userId = req.user?.id as unknown as string;
+  const role = req.user?.role as string;
 
-  const result = await orderService.findOne(orderId);
+  const result = await orderService.findOne({ orderId, userId, role });
 
   return sendResponse(res, {
     statusCode: HTTPStatusCode.OK,
@@ -68,8 +71,9 @@ const findAllByMember = async (req: IReqUser, res: Response) => {
 const complete = async (req: IReqUser, res: Response) => {
   const { orderId } = req.params as OrderIdParamInput;
   const userId = req.user?.id as unknown as string;
+  const role = req.user?.role as string;
 
-  const result = await orderService.complete({ userId, orderId });
+  const result = await orderService.complete({ userId, orderId, role });
 
   return sendResponse(res, {
     statusCode: HTTPStatusCode.OK,
@@ -115,6 +119,18 @@ const remove = async (req: IReqUser, res: Response) => {
   });
 };
 
+const notification = async (req: Request, res: Response) => {
+  const payload = req.body as OrderNotificationInput;
+
+  const result = await orderService.notification(payload);
+
+  return sendResponse(res, {
+    statusCode: HTTPStatusCode.OK,
+    message: "Notification processed successfully",
+    data: result ?? null,
+  });
+};
+
 export default {
   create,
   findAll,
@@ -124,4 +140,5 @@ export default {
   pending,
   cancelled,
   remove,
+  notification,
 };

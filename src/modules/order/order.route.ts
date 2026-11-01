@@ -2,11 +2,22 @@ import express from "express";
 import orderController from "./order.controller";
 import authMiddleware from "../../middlewares/auth.middleware";
 import { validate } from "../../middlewares/validate";
-import { createOrderSchema, orderIdParamSchema } from "./order.validation.js";
+import {
+  createOrderSchema,
+  orderIdParamSchema,
+  orderNotificationSchema,
+} from "./order.validation.js";
 import aclMiddleware from "../../middlewares/acl.middleware.js";
 import { ROLES } from "../../utils/constant.js";
 
 const router = express.Router();
+
+// Webhook Midtrans: publik, tapi diverifikasi lewat signature_key di controller/service.
+router.post(
+  "/notification",
+  validate(orderNotificationSchema),
+  orderController.notification,
+);
 
 router.post(
   "/",
@@ -36,7 +47,7 @@ router.get(
 
 router.patch(
   "/:orderId/completed",
-  [authMiddleware, aclMiddleware([ROLES.MEMBER])],
+  [authMiddleware, aclMiddleware([ROLES.ADMIN])],
   validate(orderIdParamSchema, "params"),
   orderController.complete,
 );

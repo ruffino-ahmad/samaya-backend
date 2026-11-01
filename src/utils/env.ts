@@ -32,3 +32,7 @@ export const MIDTRANS_CLIENT_KEY = process.env.MIDTRANS_CLIENT_KEY || "";
 export const MIDTRANS_SERVER_KEY = process.env.MIDTRANS_SERVER_KEY || "";
 export const MIDTRANS_TRANSACTION_URL =
   process.env.MIDTRANS_TRANSACTION_URL || "";
+
+// URL frontend dipakai untuk callback redirect Midtrans (finish/pending/error)
+export const FRONTEND_BASE_URL =
+  process.env.FRONTEND_BASE_URL || "http://localhost:3000";
