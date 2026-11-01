@@ -6,10 +6,41 @@ import { generateAccessToken } from "../../utils/jwt.js";
 import { encrypActivationCodeInput } from "../../utils/crypto.js";
 import { APP_BASE_URL } from "../../utils/env.js";
 import queueClient from "../../config/queueClient.js";
+import uploadService from "../upload/upload.service.js";
+import { getFolderFromBlobName } from "../upload/upload.validation.js";
 import type {
   UpdatePasswordArgs,
   UpdateProfileArgs,
 } from "./auth.interface.js";
+
+interface MaybeHydrated {
+  toObject?: () => unknown;
+}
+
+const toPlainObject = <T>(value: T): T => {
+  if (typeof (value as MaybeHydrated).toObject === "function") {
+    return (value as { toObject: () => T }).toObject();
+  }
+  return value;
+};
+
+const serializeProfile = <T extends { profilePicture?: string }>(user: T) => {
+  const plain = toPlainObject(user);
+  delete (plain as { password?: string }).password;
+  delete (plain as { __v?: number }).__v;
+
+  const picture = plain.profilePicture ?? "";
+  const isLegacyUrl = /^https?:\/\//.test(picture);
+
+  return {
+    ...plain,
+    profilePictureUrl: isLegacyUrl
+      ? picture
+      : picture && getFolderFromBlobName(picture)
+        ? uploadService.getPublicUrl(picture)
+        : null,
+  };
+};
 
 const register = async (payload: CreateUserInput) => {
   const { fullname, username, email, password } = payload;
@@ -83,7 +114,7 @@ const login = async (payload: LoginInput) => {
 
 const me = async (id: string) => {
   const result = await UserModel.findById(id);
-  return result;
+  return result ? serializeProfile(result) : null;
 };
 
 const activationAccount = async (activationCode: string) => {
@@ -120,20 +151,39 @@ const updateProfile = async ({ payload, userId }: UpdateProfileArgs) => {
 
   const { fullname, profilePicture } = payload;
 
-  const updatedUser = await UserModel.findByIdAndUpdate(
-    userId,
-    {
-      fullname,
-      profilePicture,
-    },
-    { returnDocument: "after", runValidators: true },
-  );
-
-  if (!updatedUser) {
+  const user = await UserModel.findById(userId);
+  if (!user) {
     throw Errors.NotFound("User not found");
   }
 
-  return updatedUser;
+  const previousPicture = user.profilePicture;
+
+  if (fullname !== undefined) {
+    user.fullname = fullname;
+  }
+
+  if (profilePicture !== undefined) {
+    user.profilePicture = profilePicture;
+  }
+
+  const updatedUser = await user.save();
+
+  if (
+    profilePicture &&
+    previousPicture &&
+    previousPicture !== profilePicture &&
+    getFolderFromBlobName(previousPicture)
+  ) {
+    const stillReferenced = await UserModel.countDocuments({
+      profilePicture: previousPicture,
+    }).catch(() => null);
+
+    if (stillReferenced === 0) {
+      await uploadService.deleteBlob(previousPicture).catch(() => undefined);
+    }
+  }
+
+  return serializeProfile(updatedUser);
 };
 
 const updatePassword = async ({ payload, userId }: UpdatePasswordArgs) => {

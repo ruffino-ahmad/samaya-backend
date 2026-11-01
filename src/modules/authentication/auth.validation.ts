@@ -1,5 +1,6 @@
-import { profile } from "node:console";
 import { z } from "zod";
+
+import { blobNameSchemaFor } from "../upload/upload.validation";
 
 export const registerValidateSchema = z
   .object({
@@ -65,10 +66,12 @@ export const updateProfileValidateSchema = z.object({
     .optional()
     .openapi({ example: "Ruffino Ahmad Noor" }),
   profilePicture: z
-    .string()
-    .url({ message: "Invalid URL for profile picture" })
+    .union([
+      z.string().url({ message: "Invalid URL for profile picture" }),
+      blobNameSchemaFor("profile-pictures"),
+    ])
     .optional()
-    .openapi({ example: "https://example.com/profile.jpg" }),
+    .openapi({ example: "profile-pictures/b3f1d2a4-profile-photo.jpg" }),
 });
 
 export const updatePasswordValidateSchema = z
