@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
+import jwt from "jsonwebtoken";
 import { getUserData, type IUserToken } from "../utils/jwt.js";
-import { Errors } from "ds-express-errors";
+import { AuthTokenError } from "../config/error.config.js";
 
 export interface IReqUser extends Request {
   user?: IUserToken;
@@ -12,14 +13,17 @@ export default (req: IReqUser, res: Response, next: NextFunction) => {
       ? req.headers.authorization.split(" ")[1]
       : null;
   if (!token) {
-    throw Errors.Unauthorized("Unauthorized access");
+    throw new AuthTokenError("Unauthorized access", "TOKEN_INVALID");
   }
 
-  const user = getUserData(token);
-  if (!user) {
-    throw Errors.Unauthorized("Unauthorized access");
+  try {
+    req.user = getUserData(token);
+  } catch (error) {
+    if (error instanceof jwt.TokenExpiredError) {
+      throw new AuthTokenError("Token has expired", "ACCESS_TOKEN_EXPIRED");
+    }
+    throw new AuthTokenError("Invalid token", "TOKEN_INVALID");
   }
 
-  req.user = user;
   next();
 };

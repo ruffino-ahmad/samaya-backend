@@ -7,7 +7,15 @@ export const PORT = process.env.PORT || 3000;
 export const NODE_ENV = process.env.NODE_ENV || "production";
 export const DATABASE_URL = process.env.DATABASE_URL || "";
 export const APP_BASE_URL = process.env.APP_BASE_URL || "http://localhost:3000";
-export const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET || "";
+export const JWT_ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || "";
+export const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || "";
+export const REDIS_URL = process.env.REDIS_URL || "";
+export const ACCESS_TOKEN_TTL_SECONDS = Number(
+  process.env.ACCESS_TOKEN_TTL_SECONDS,
+);
+export const REFRESH_TOKEN_TTL_SECONDS = Number(
+  process.env.REFRESH_TOKEN_TTL_SECONDS,
+);
 export const ACS_CONNECTION_STRING = process.env.ACS_CONNECTION_STRING || "";
 export const ACS_SENDER_ADDRESS = process.env.ACS_SENDER_ADDRESS || "";
 // AZURE STORAGE

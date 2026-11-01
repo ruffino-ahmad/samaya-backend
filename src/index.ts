@@ -17,6 +17,7 @@ import {
 import connectToDatabase from "./utils/database";
 import { PORT } from "./utils/env.js";
 import { setupErrorHandling } from "./config/error.config.js";
+import redis, { waitForRedis } from "./config/redis.js";
 import { ensureContainerExists } from "./modules/upload/upload.service.js";
 
 async function startServer() {
@@ -28,6 +29,14 @@ async function startServer() {
     // SET UP BLOB STORAGE
     await ensureContainerExists();
     console.log("Blob container status: ready");
+
+    // SET UP REDIS (tidak fatal: kalau gagal, endpoint sesi membalas 503)
+    try {
+      const redisStatus = await waitForRedis();
+      console.log("Redis status:", redisStatus);
+    } catch (error) {
+      console.error("Redis status:", (error as Error).message);
+    }
 
     // SET UP ERROR HANDLING
     setupErrorHandling();
@@ -65,6 +74,7 @@ async function startServer() {
       onShutdown: async (signal) => {
         console.log(`Received ${signal}. Shutting down gracefully...`);
         await mongoose.disconnect();
+        await redis.quit().catch(() => undefined);
       },
 
       onCrash: async (error, signal) => {

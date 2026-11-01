@@ -21,6 +21,17 @@ export class ValidationAppError extends AppError {
   }
 }
 
+export type AuthErrorCode = "ACCESS_TOKEN_EXPIRED" | "TOKEN_INVALID";
+
+export class AuthTokenError extends AppError {
+  errorCode: AuthErrorCode;
+
+  constructor(message: string, errorCode: AuthErrorCode) {
+    super(message, 401, true);
+    this.errorCode = errorCode;
+  }
+}
+
 export function setupErrorHandling() {
   setConfig({
     devEnvironments: ["development", "local"],
@@ -96,6 +107,11 @@ export function setupErrorHandling() {
       // Cuma tambahin `data` kalau error-nya emang punya detail (Zod/Mongoose)
       if (error instanceof ValidationAppError) {
         base.data = error.details;
+      }
+
+      // Supaya client bisa membedakan token kedaluwarsa vs tidak valid
+      if (error instanceof AuthTokenError) {
+        base.errorCode = error.errorCode;
       }
 
       if (isDev) {

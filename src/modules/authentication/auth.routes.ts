@@ -7,6 +7,7 @@ import authMiddleware from "../../middlewares/auth.middleware";
 import {
   activationCodeSchema,
   loginValidateSchema,
+  refreshTokenSchema,
   registerValidateSchema,
   updatePasswordValidateSchema,
   updateProfileValidateSchema,
@@ -23,6 +24,10 @@ router.post(
 );
 
 router.post("/login", validate(loginValidateSchema), authController.login);
+
+router.post("/refresh", validate(refreshTokenSchema), authController.refresh);
+
+router.post("/logout", validate(refreshTokenSchema), authController.logout);
 
 router.get("/me", authMiddleware, authController.me);
 

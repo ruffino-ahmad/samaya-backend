@@ -50,6 +50,15 @@ export const loginValidateSchema = z
   })
   .openapi("LoginRequest");
 
+export const refreshTokenSchema = z
+  .object({
+    refreshToken: z
+      .string()
+      .min(1, { message: "Refresh token is required" })
+      .openapi({ example: "eyJhbGciOiJIUzI1NiIs..." }),
+  })
+  .openapi("RefreshTokenRequest");
+
 export const activationCodeSchema = z
   .object({
     activationCode: z
@@ -136,6 +145,7 @@ export const errorResponseSchema = z
 export type RegisterInput = z.infer<typeof registerValidateSchema>;
 export type CreateUserInput = Omit<RegisterInput, "confirmPassword">;
 export type LoginInput = z.infer<typeof loginValidateSchema>;
+export type RefreshTokenInput = z.infer<typeof refreshTokenSchema>;
 export type ActivationCodeInput = z.infer<typeof activationCodeSchema>;
 export type UpdateProfileInput = z.infer<typeof updateProfileValidateSchema>;
 export type UpdatePasswordInput = z.infer<typeof updatePasswordValidateSchema>;

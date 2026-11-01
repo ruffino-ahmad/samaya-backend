@@ -5,6 +5,7 @@ import authService from "./auth.services.js";
 import {
   type ActivationCodeInput,
   type LoginInput,
+  type RefreshTokenInput,
   type RegisterInput,
   type UpdatePasswordInput,
   type UpdateProfileInput,
@@ -41,6 +42,30 @@ const login = async (req: Request, res: Response) => {
     statusCode: HTTPStatusCode.OK,
     message: "Login validation successful",
     data: result,
+  });
+};
+
+const refresh = async (req: Request, res: Response) => {
+  const { refreshToken } = req.body as RefreshTokenInput;
+
+  const result = await authService.refresh(refreshToken);
+
+  return sendResponse(res, {
+    statusCode: HTTPStatusCode.OK,
+    message: "Token refresh successful",
+    data: result,
+  });
+};
+
+const logout = async (req: Request, res: Response) => {
+  const { refreshToken } = req.body as RefreshTokenInput;
+
+  await authService.logout(refreshToken);
+
+  return sendResponse(res, {
+    statusCode: HTTPStatusCode.OK,
+    message: "Logout successful",
+    data: null,
   });
 };
 
@@ -95,6 +120,8 @@ const updatePassword = async (req: IReqUser, res: Response) => {
 export default {
   register,
   login,
+  refresh,
+  logout,
   me,
   activationAccount,
   updateProfile,
